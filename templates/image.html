@@ -1,0 +1,22 @@
+{% macro imageEntry(url) %}
+    <div><img src="{{url}}"/></div>
+{% endmacro %}
+
+{% macro imageList(urls, next_page) %}
+    {% for url in urls %}
+        {% call imageEntry(url) %}
+    {% endfor %}
+    {% if urls.len() > 0 %}
+        <div style="flex-grow: 10000000000000;"
+             hx-get="/imageList?page={{next_page}}"
+             hx-trigger="revealed"
+             hx-swap="outerHTML"
+        ></div>
+    {% else %}
+        <div style="flex-grow: 10000000000000;"></div>
+    {% endif %}
+{% endmacro %}
+
+{% block imageList %}
+    {% call imageList(urls, next_page) %}
+{% endblock %}

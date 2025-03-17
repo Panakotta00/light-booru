@@ -1,0 +1,7 @@
+/target
+/node_modules
+/static/styles/main.css
+*-shm
+*-wal
+.idea
+index

@@ -1,0 +1,28 @@
+<!-- prettier-ignore -->
+{% import  "image.html" as image %}
+
+{% extends "base.html" %}
+
+{% block title %}FicsIt-Networks-Repository{% endblock %}
+
+{% block head %}
+<meta name="description" content="The FicsIt-Networks-Repository contains a collection of Software Packages for use with the FicsIt-Networks mod.">
+{% endblock %}
+
+{% block content %}
+<main class="flex-1">
+    <div class="images">
+        {% call image::imageList(images, 1) %}
+    </div>
+    <script>
+        function updateImages() {
+            let imgs = document.querySelectorAll(".images img");
+            imgs.forEach(img => img.addEventListener("load", () => {
+                img.parentElement.style.setProperty("--r", (img.clientWidth/img.clientHeight).toString());
+            }));
+        }
+        document.addEventListener("htmx:afterSwap", updateImages);
+        updateImages();
+    </script>
+</main>
+{% endblock %}
