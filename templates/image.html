@@ -1,14 +1,24 @@
-{% macro imageEntry(url) %}
-    <div><img src="{{url}}"/></div>
+{% macro imageEntry(image) %}
+    <div class="image-container cursor-pointer"
+         data-url="{{ image.url }}"
+         hx-trigger="click"
+         hx-get="/imageViewer?id={{ image.id|urlencode }}"
+         hx-swap="outerHTML"
+         hx-target="#image-viewer"
+         hx-sync="#image-gallery:replace"
+         _="on htmx:afterOnLoad
+                remove .current-image from .image-container
+                add .current-image to me"
+    ><img src="{{ image.url }}"/></div>
 {% endmacro %}
 
-{% macro imageList(urls, next_page) %}
-    {% for url in urls %}
-        {% call imageEntry(url) %}
+{% macro imageList(images, search, page_size, next_page) %}
+    {% for image in images %}
+        {% call imageEntry(image) %}
     {% endfor %}
-    {% if urls.len() > 0 %}
-        <div style="flex-grow: 10000000000000;"
-             hx-get="/imageList?page={{next_page}}"
+    {% if images.len() > 0 %}
+        <div style="flex-grow: 10000000000000; min-width: 1rem; min-height: 1rem;"
+             hx-get="/imageList?search={{search|urlencode}}&page_size={{page_size}}&page={{next_page}}"
              hx-trigger="revealed"
              hx-swap="outerHTML"
         ></div>
@@ -18,5 +28,5 @@
 {% endmacro %}
 
 {% block imageList %}
-    {% call imageList(urls, next_page) %}
+    {% call imageList(urls, search, page_size, next_page) %}
 {% endblock %}

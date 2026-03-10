@@ -36,15 +36,18 @@
                 end
                 set window.location.href to `/?${it}`
                 halt">
-        <input id="search"
-               autofocus
-               class="form-control p-2 w-full bg-primary-bg text-primary-fg"
-               type="search"
-               spellcheck="false"
-               name="search" placeholder="Search Repository..."
-               hx-get="/"
-               hx-trigger="input changed delay:500ms"
-               hx-target="#package-list" />
+            <input id="search"
+                   autofocus
+                   class="form-control p-2 w-full bg-primary-bg text-primary-fg"
+                   type="search"
+                   spellcheck="false"
+                   name="search" placeholder="Search Repository..."
+                   hx-get="/imageList"
+                   hx-trigger="input changed delay:500ms"
+                   hx-trigger="revealed"
+                   hx-swap="innerHTML"
+                   hx-target="#image-gallery"
+            />
         </form>
         <script>
             let search = document.getElementById("search");

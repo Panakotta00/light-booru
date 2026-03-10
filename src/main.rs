@@ -1,15 +1,15 @@
-#![feature(async_closure)]
-
 mod routes;
 mod templates;
 mod database;
+mod config;
+mod util;
 
 use std::fs;
 use std::fs::read_dir;
-use axum::routing::get;
+use axum::routing::{get, post};
 use axum::Router;
 use filetime::FileTime;
-use tantivy::{doc, DateTime, Index, IndexWriter, TantivyDocument};
+use tantivy::{doc, DateTime, Index, IndexWriter, TantivyDocument, Term};
 use tantivy::directory::MmapDirectory;
 use tower_http::compression::CompressionLayer;
 use tower_http::trace::TraceLayer;
@@ -19,9 +19,24 @@ use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
 use crate::database::{build_schema, load_database, ImageSchema};
 
+#[derive(Clone)]
+pub struct BooruState {
+    database: database::Database,
+    config: config::Config,
+}
+
 pub async fn app() -> Result<Router, anyhow::Error> {
-	let database = load_database();
-	
+    let config = config::Config::load();
+	let database = load_database(if config.index_on_load { Some(&config.image_files_path) } else { None });
+
+    println!("Database loaded with {} images!", database.index.reader().unwrap().searcher().num_docs());
+
+    let state = BooruState {
+        database,
+        config,
+    };
+
+
 	Ok(Router::new()
 		.nest_service(
 			"/script",
@@ -33,13 +48,17 @@ pub async fn app() -> Result<Router, anyhow::Error> {
 		)
 		.nest_service(
 			"/images",
-			tower_http::services::ServeDir::new("."))
+			tower_http::services::ServeDir::new(&state.config.image_files_path))
 		.route("/", get(routes::get_index))
 		.route("/imageList", get(routes::get_images))
+		.route("/imageViewer", get(routes::get_image_viewer))
+		.route("/imageViewer/addTag", post(routes::add_tag))
+		.route("/imageViewer/deleteTag", post(routes::delete_tag))
+		.route("/imageViewer/refreshAutoTags", get(routes::refresh_auto_tags))
 		.layer(TraceLayer::new_for_http())
 		.layer(CompressionLayer::new())
 		.layer(CorsLayer::new().allow_origin(Any))
-		.with_state(database))
+		.with_state(state))
 }
 
 #[tokio::main]

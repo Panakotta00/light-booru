@@ -1,0 +1,78 @@
+<div id="image-viewer"
+     class="fixed inset-0 bg-black bg-opacity-90 z-50 flex flex-row items-center justify-center"
+     _="on click
+                if target is me or target is #view-img
+                    add .hidden to me
+                end
+            on keydown[key is 'Escape'] from window
+                add .hidden to #image-viewer
+            on keydown[key is 'ArrowRight'] from window
+                if no .hidden in #image-viewer
+                    set current to first .current-image
+                    set nextImg to next .image-container from current
+                    if nextImg
+                        remove .current-image from .image-container
+                        add .current-image to nextImg
+                        trigger click on nextImg
+                    end
+                end
+            on keydown[key is 'ArrowLeft'] from window
+                if no .hidden in #image-viewer
+                    set current to first .current-image
+                    set prevImg to previous .image-container from current
+                    if prevImg
+                        remove .current-image from .image-container
+                        add .current-image to prevImg
+                        trigger click on prevImg
+                    end
+                end
+            "
+>
+    <div class="h-full min-w-10 bg-primary-bg p-4">
+        <div id="preview-tags" class="flex flex-col gap-2 justify-center mb-4">
+            {% for tag in image.tags %}
+                <span class="tag-badge bg-blue-500 text-white px-2 py-1 rounded-full text-sm flex items-center gap-1"
+                      data-tag="{{ tag }}">
+                    {{ tag }}
+                    <button
+                            class="remove-tag hover:text-red-300 right-0"
+                            hx-trigger="click"
+                            hx-post="/imageViewer/deleteTag?id={{ image.id|urlencode }}&tag={{ tag|urlencode }}"
+                            hx-target="#image-viewer"
+                            hx-swap="outerHTML"
+                            hx-sync="#image-gallery:replace"
+                    >×</button>
+                </span>
+            {% endfor %}
+        </div>
+        <div class="flex gap-2 justify-center p-4">
+            <input id="new-tag-input" type="text" placeholder="Add tag..."
+                   name="tag"
+                   class="bg-gray-800 text-white px-3 py-1 rounded border border-gray-600 focus:outline-none focus:border-blue-500"
+                   hx-post="/imageViewer/addTag?id={{ image.id|urlencode }}"
+                   hx-trigger="change"
+                   hx-target="#image-viewer"
+                   hx-swap="outerHTML"
+                   hx-sync="#image-gallery:replace"
+                   _="on htmx:beforeRequest set @value to ''"
+            >
+        </div>
+        <button
+            hx-trigger="click"
+            hx-get="/imageViewer/refreshAutoTags?id={{ image.id|urlencode }}"
+            hx-target="#image-viewer"
+            hx-swap="outerHTML"
+            hx-sync="#image-gallery:replace">Refersh Auto-Tags</button>
+        <div id="auto-tags" class="flex flex-col gap-2 justify-center mb-4">
+            {% for tag in image.auto_tags %}
+            <span class="tag-badge bg-blue-500 text-white px-2 py-1 rounded-full text-sm flex items-center gap-1"
+                  data-tag="{{ tag }}">
+                    {{ tag }}
+                </span>
+            {% endfor %}
+        </div>
+    </div>
+    <div class="w-full h-full flex items-center justify-center" _="on click add .hidden to #image-viewer">
+        <img id="view-img" src="{{ image.url }}" class="object-contain h-full w-full" />
+    </div>
+</div>
