@@ -10,6 +10,7 @@ use tantivy::directory::MmapDirectory;
 use tantivy::schema::*;
 use crate::config;
 use crate::util::sanitize_tag;
+use anyhow;
 
 #[derive(Clone)]
 pub struct ImageSchema {
@@ -97,6 +98,24 @@ pub fn write_index(images_path: &str, image_schema: &ImageSchema, index: &Index)
 }
 
 impl Database {
+    pub fn update_file_in_index(&self, images_path: &str, filename: &str) -> Result<(), anyhow::Error> {
+        let mut writer: IndexWriter = self.index.writer(50_000_000)?;
+        let file_path = Path::new(images_path).join(filename);
+
+        if file_path.exists() && file_path.is_file() {
+            let doc = image_file_to_index_doc(&self.image_schema, &file_path, filename);
+            let term = Term::from_field_text(self.image_schema.path, filename);
+            writer.delete_term(term);
+            writer.add_document(doc)?;
+        } else {
+            let term = Term::from_field_text(self.image_schema.path, filename);
+            writer.delete_term(term);
+        }
+
+        writer.commit()?;
+        Ok(())
+    }
+
     pub fn update_tags(&self, images_path: &str, filename: &str, remove_tags: &[String], add_tags: &[String]) -> Result<(), String> {
         let file_path = Path::new(images_path).join(filename);
 
@@ -139,14 +158,7 @@ impl Database {
             Err(e) => return Err(format!("Failed to open metadata: {}", e)),
         }
 
-        let mut writer: IndexWriter = self.index.writer(50_000_000).map_err(|e| e.to_string())?;
-
-        let doc = image_file_to_index_doc(&self.image_schema, &file_path, filename);
-
-        let term = Term::from_field_text(self.image_schema.path, filename);
-        writer.delete_term(term);
-        writer.add_document(doc).map_err(|e| e.to_string())?;
-        writer.commit().map_err(|e| e.to_string())?;
+        self.update_file_in_index(images_path, filename).map_err(|e| e.to_string())?;
 
         Ok(())
     }

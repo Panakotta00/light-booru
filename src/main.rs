@@ -3,6 +3,7 @@ mod templates;
 mod database;
 mod config;
 mod util;
+mod watcher;
 
 use std::fs;
 use std::fs::read_dir;
@@ -35,6 +36,8 @@ pub async fn app() -> Result<Router, anyhow::Error> {
         database,
         config,
     };
+
+    watcher::start_watcher(state.clone())?;
 
 
 	Ok(Router::new()
