@@ -49,9 +49,7 @@ pub async fn app() -> Result<Router, anyhow::Error> {
 			"/styles",
 			tower_http::services::ServeDir::new("static/styles"),
 		)
-		.nest_service(
-			"/images",
-			tower_http::services::ServeDir::new(&state.config.image_files_path))
+		.route("/images/{*path}", get(routes::get_image_file))
 		.route("/", get(routes::get_index))
 		.route("/imageList", get(routes::get_images))
 		.route("/imageViewer", get(routes::get_image_viewer))

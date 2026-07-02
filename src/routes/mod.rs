@@ -1,8 +1,12 @@
 use std::fs::read_dir;
-use std::path::Path;
+use std::io::Cursor;
+use std::path::{Component, Path, PathBuf};
 use crate::templates::{GetIndexResponse, ImageListResponse, ImageInfo};
 use askama_axum::{IntoResponse, Response};
-use axum::extract::{Query, State, Form};
+use axum::body::Body;
+use axum::extract::{Form, Path as AxumPath, Query, RawQuery, State};
+use axum::http::{HeaderValue, StatusCode};
+use axum::response::IntoResponse as AxumIntoResponse;
 use itertools::Itertools;
 use serde::Deserialize;
 use tantivy::collector::TopDocs;
@@ -13,6 +17,91 @@ use crate::{config, BooruState};
 use crate::database::{Database};
 use tantivy::query::QueryParser;
 use crate::config::Config;
+
+fn is_safe_relative_path(image_path: &str) -> bool {
+    let path = Path::new(image_path);
+    !path.is_absolute()
+        && path
+            .components()
+            .all(|component| matches!(component, Component::Normal(_)))
+}
+
+fn guess_content_type(path: &Path) -> &'static str {
+    match path
+        .extension()
+        .and_then(|e| e.to_str())
+        .map(|e| e.to_ascii_lowercase())
+        .as_deref()
+    {
+        Some("jpg") | Some("jpeg") => "image/jpeg",
+        Some("png") => "image/png",
+        Some("gif") => "image/gif",
+        Some("webp") => "image/webp",
+        Some("bmp") => "image/bmp",
+        Some("svg") => "image/svg+xml",
+        _ => "application/octet-stream",
+    }
+}
+
+fn has_preview_query(raw_query: &RawQuery) -> bool {
+    raw_query
+        .0
+        .as_deref()
+        .map(|query| {
+            url::form_urlencoded::parse(query.as_bytes())
+                .any(|(key, _)| key == "preview")
+        })
+        .unwrap_or(false)
+}
+
+pub async fn get_image_file(
+    AxumPath(image_path): AxumPath<String>,
+    raw_query: RawQuery,
+    State(BooruState { config, .. }): State<BooruState>,
+) -> axum::response::Result<impl AxumIntoResponse> {
+    if !is_safe_relative_path(&image_path) {
+        return Err(StatusCode::BAD_REQUEST.into());
+    }
+
+    let full_path: PathBuf = Path::new(&config.image_files_path).join(&image_path);
+    if !full_path.exists() || !full_path.is_file() {
+        return Err(StatusCode::NOT_FOUND.into());
+    }
+
+    if has_preview_query(&raw_query) {
+        let image_bytes = tokio::fs::read(&full_path)
+            .await
+            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+        let image = image::load_from_memory(&image_bytes)
+            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+        let preview = image.resize(600, 600, image::imageops::FilterType::Triangle);
+
+        let mut encoded = Vec::new();
+        let mut writer = Cursor::new(&mut encoded);
+        let mut encoder = image::codecs::jpeg::JpegEncoder::new_with_quality(&mut writer, 70);
+        encoder
+            .encode_image(&preview)
+            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+        return Ok((
+            [(axum::http::header::CONTENT_TYPE, HeaderValue::from_static("image/jpeg"))],
+            Body::from(encoded),
+        ));
+    }
+
+    let bytes = tokio::fs::read(&full_path)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let content_type = guess_content_type(&full_path);
+
+    Ok((
+        [(
+            axum::http::header::CONTENT_TYPE,
+            HeaderValue::from_static(content_type),
+        )],
+        Body::from(bytes),
+    ))
+}
 
 #[derive(Deserialize)]
 pub struct Pagination {
