@@ -6,3 +6,5 @@
 .idea
 index
 /images
+.direnv/
+preview-cache/

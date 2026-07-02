@@ -1,10 +1,10 @@
 use askama::Template;
 
 pub struct ImageInfo {
-    pub url: String,
-    pub tags: Vec<String>,
-    pub auto_tags: Vec<String>,
-    pub id: String,
+	pub url: String,
+	pub tags: Vec<String>,
+	pub auto_tags: Vec<String>,
+	pub id: String,
 }
 
 #[derive(Template)]
@@ -15,8 +15,8 @@ pub struct EmptyResponse {}
 #[template(path = "index.html")]
 pub struct GetIndexResponse<'a> {
 	pub images: Vec<ImageInfo>,
-    pub search: &'a str,
-    pub page_size: usize,
+	pub search: &'a str,
+	pub page_size: usize,
 	pub next_page: usize,
 }
 
@@ -24,8 +24,8 @@ pub struct GetIndexResponse<'a> {
 #[template(path = "imageList.html")]
 pub struct ImageListResponse<'a> {
 	pub images: Vec<ImageInfo>,
-    pub search: &'a str,
-    pub page_size: usize,
+	pub search: &'a str,
+	pub page_size: usize,
 	pub next_page: usize,
 }
 

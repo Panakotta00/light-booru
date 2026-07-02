@@ -9,7 +9,7 @@
          _="on htmx:afterOnLoad
                 remove .current-image from .image-container
                 add .current-image to me"
-    ><img src="{{ image.url }}"/></div>
+    ><img src="{{ image.url }}?preview"/></div>
 {% endmacro %}
 
 {% macro imageList(images, search, page_size, next_page) %}
