@@ -2,6 +2,7 @@ use crate::config::Config;
 use crate::database::Database;
 use crate::preview;
 use crate::templates::{GetIndexResponse, ImageInfo, ImageListResponse};
+use crate::util;
 use crate::{config, BooruState};
 use askama_axum::{IntoResponse, Response};
 use axum::body::Body;
@@ -27,20 +28,7 @@ fn is_safe_relative_path(image_path: &str) -> bool {
 }
 
 fn guess_content_type(path: &Path) -> &'static str {
-	match path
-		.extension()
-		.and_then(|e| e.to_str())
-		.map(|e| e.to_ascii_lowercase())
-		.as_deref()
-	{
-		Some("jpg") | Some("jpeg") => "image/jpeg",
-		Some("png") => "image/png",
-		Some("gif") => "image/gif",
-		Some("webp") => "image/webp",
-		Some("bmp") => "image/bmp",
-		Some("svg") => "image/svg+xml",
-		_ => "application/octet-stream",
-	}
+	util::detect_content_type(path)
 }
 
 fn has_preview_query(raw_query: &RawQuery) -> bool {
@@ -68,10 +56,10 @@ pub async fn get_image_file(
 	if has_preview_query(&raw_query) {
 		let preview_path = preview::ensure_preview(&config, &image_path)
 			.await
-			.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+			.map_err(|e| { println!("Error: {:?}", e); StatusCode::INTERNAL_SERVER_ERROR})?;
 		let bytes = tokio::fs::read(&preview_path)
 			.await
-			.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+			.map_err(|e| { println!("Error: {:?}", e); StatusCode::INTERNAL_SERVER_ERROR})?;
 
 		return Ok((
 			[

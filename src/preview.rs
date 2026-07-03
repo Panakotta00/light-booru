@@ -1,4 +1,5 @@
 use crate::config::Config;
+use crate::util;
 use image::GenericImageView;
 use std::io::Cursor;
 use std::path::{Path, PathBuf};
@@ -6,12 +7,7 @@ use tokio::sync::Semaphore;
 use tracing::{debug, warn};
 
 fn is_supported_image(path: &Path) -> bool {
-	let ext = path
-		.extension()
-		.and_then(|e| e.to_str())
-		.unwrap_or_default()
-		.to_ascii_lowercase();
-	["jpg", "jpeg", "png", "gif", "webp", "bmp", "tiff", "tif"].contains(&ext.as_str())
+	util::is_supported_image_file(path)
 }
 
 fn preview_file_path(cache_root: &Path, relative_path: &str) -> PathBuf {
