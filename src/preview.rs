@@ -21,7 +21,9 @@ fn encode_preview_bytes(
 	max_size: u32,
 	jpeg_quality: u8,
 ) -> anyhow::Result<Vec<u8>> {
-	let image = image::open(image_path)?;
+	let image = image::ImageReader::open(image_path)?
+		.with_guessed_format()?
+		.decode()?;
 	let (width, height) = image.dimensions();
 	if width == 0 || height == 0 {
 		anyhow::bail!("image has zero dimension")
