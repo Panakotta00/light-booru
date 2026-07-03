@@ -1,0 +1,12 @@
+services:
+  light-booru:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8070:3000"
+    environment:
+      IMAGE_FILES_PATH: "./images"
+    volumes:
+      - ./images:/app/src/images
+    restart: unless-stopped
