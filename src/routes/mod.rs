@@ -102,11 +102,12 @@ pub fn default_page() -> usize {
 	0
 }
 pub fn default_page_size() -> usize {
-	10
+	24
 }
 
 pub async fn search(
 	database: &Database,
+	config: &Config,
 	page: usize,
 	page_size: usize,
 	search: &str,
@@ -140,11 +141,26 @@ pub async fn search(
 				.get_all(database.image_schema.auto_tags)
 				.map(|v| v.as_str().unwrap_or_default().to_string())
 				.collect();
+			let aspect_ratio = doc.get_first(database.image_schema.aspect_ratio)
+				.map(|v| v.as_f64())
+				.flatten();
+
+			let max_size = config.preview_max_size as f64;
+			let (width, height) = aspect_ratio.map(|r|
+					if r > 1.0 {
+						(max_size, max_size / r)
+					} else {
+						(max_size * r, max_size)
+					}
+			).unwrap_or((max_size, max_size));
 			Some(ImageInfo {
 				url: format!("images/{path}"),
 				tags,
 				auto_tags,
 				id: path,
+				aspect_ratio: aspect_ratio.unwrap_or(1.0),
+				width: width as u32,
+				height: height as u32,
 			})
 		})
 		.flatten()
@@ -178,6 +194,7 @@ pub async fn get_index(
 ) -> axum::response::Result<Response> {
 	let images = search(
 		&database,
+		&config,
 		pagination.page,
 		pagination.page_size,
 		&searchQuery.search,
@@ -202,6 +219,7 @@ pub async fn get_images(
 	//    .ok_or(Err(axum::response::ErrorResponse::from("Fuck!")))?;
 	let images = search(
 		&database,
+		&config,
 		pagination.page,
 		pagination.page_size,
 		&searchQuery.search,
@@ -256,12 +274,24 @@ pub async fn get_image_viewer(
 			.get_all(database.image_schema.auto_tags)
 			.map(|t| t.as_str().unwrap_or_default().to_string())
 			.collect();
+		let aspect_ratio = doc.get_first(database.image_schema.aspect_ratio).map(|v| v.as_f64()).flatten();
+		let max_size = config.preview_max_size as f64;
+		let (width, height) = aspect_ratio.map(|r|
+			if r > 1.0 {
+				(max_size, max_size / r)
+			} else {
+				(max_size * r, max_size)
+			}
+		).unwrap_or((max_size, max_size));
 		Ok(crate::templates::ImageViewerResponse {
 			image: ImageInfo {
 				url: format!("images/{path}"),
 				tags,
 				auto_tags,
 				id: path,
+				aspect_ratio: aspect_ratio.unwrap_or(1.0),
+				width: width as u32,
+				height: height as u32,
 			},
 		}
 		.into_response())

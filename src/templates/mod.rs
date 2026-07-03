@@ -5,6 +5,9 @@ pub struct ImageInfo {
 	pub tags: Vec<String>,
 	pub auto_tags: Vec<String>,
 	pub id: String,
+	pub aspect_ratio: f64,
+	pub width: u32,
+	pub height: u32,
 }
 
 #[derive(Template)]

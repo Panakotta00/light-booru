@@ -19,6 +19,7 @@ pub struct ImageSchema {
 	pub time: Field,
 	pub tags: Field,
 	pub auto_tags: Field,
+	pub aspect_ratio: Field,
 }
 
 #[derive(Clone)]
@@ -53,6 +54,7 @@ pub fn build_schema() -> (Schema, ImageSchema) {
 		time: builder.add_date_field("time", STORED | FAST),
 		tags: builder.add_text_field("tags", TEXT | STORED),
 		auto_tags: builder.add_text_field("auto_tags", TEXT | STORED),
+		aspect_ratio: builder.add_f64_field("aspect_ratio", STORED),
 	};
 
 	(builder.build(), package)
@@ -80,6 +82,13 @@ pub fn image_file_to_index_doc(
 		for tag in &tags {
 			doc.add_text(image_schema.tags, tag);
 		}
+
+		let width = meta.get_pixel_width();
+		let height = meta.get_pixel_height();
+		if width > 0 && height > 0 {
+			let aspect_ratio = width as f64 / height as f64;
+			doc.add_f64(image_schema.aspect_ratio, aspect_ratio);
+		};
 	};
 
 	doc

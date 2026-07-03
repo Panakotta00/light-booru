@@ -9,22 +9,30 @@
          _="on htmx:afterOnLoad
                 remove .current-image from .image-container
                 add .current-image to me"
-    ><img src="{{ image.url }}?preview"/></div>
+         style="background-color: black; content-visibility: auto"
+    ><img src="{{ image.url }}?preview"
+          style="aspect-ratio: {{ image.aspect_ratio }}"
+          width="{{ image.width }}"
+          height="{{ image.height }}"
+          loading="lazy"
+          decoding="async"/></div>
 {% endmacro %}
 
 {% macro imageList(images, search, page_size, next_page) %}
-    {% for image in images %}
-        {% call imageEntry(image) %}
-    {% endfor %}
     {% if images.len() > 0 %}
         <div style="flex-grow: 10000000000000; min-width: 1rem; min-height: 1rem;"
              hx-get="/imageList?search={{search|urlencode}}&page_size={{page_size}}&page={{next_page}}"
              hx-trigger="revealed"
-             hx-swap="outerHTML"
+             hx-target=".images"
+             hx-swap="beforeend"
+             _="on htmx:afterRequest remove me"
         ></div>
     {% else %}
         <div style="flex-grow: 10000000000000;"></div>
     {% endif %}
+    {% for image in images %}
+        {% call imageEntry(image) %}
+    {% endfor %}
 {% endmacro %}
 
 {% block imageList %}
